@@ -118,6 +118,7 @@ static unsigned arg_default_start_limit_burst = DEFAULT_START_LIMIT_BURST;
 static usec_t arg_runtime_watchdog = 0;
 static usec_t arg_shutdown_watchdog = 10 * USEC_PER_MINUTE;
 static char **arg_default_environment = NULL;
+static bool arg_disable_watchdog = false;
 static struct rlimit *arg_default_rlimit[_RLIMIT_MAX] = {};
 static uint64_t arg_capability_bounding_set = CAP_ALL;
 static nsec_t arg_timer_slack_nsec = NSEC_INFINITY;
@@ -399,6 +400,13 @@ static int parse_proc_cmdline_item(const char *key, const char *value) {
                r = set_machine_id(value);
                if (r < 0)
                        log_warning("MachineID '%s' is not valid. Ignoring.", value);
+        } else if (streq(key, "systemd.disable_watchdog") && value) {
+
+            r = parse_boolean(value);
+            if (r < 0)
+                    log_warning("Failed to parse disable watchdog switch %s. Ignoring.", value);
+            else
+                    arg_disable_watchdog = r;
 
         } else if (streq(key, "quiet") && !value) {
 
@@ -1732,7 +1740,7 @@ int main(int argc, char *argv[]) {
                 test_usr();
         }
 
-        if (arg_system && arg_runtime_watchdog > 0 && arg_runtime_watchdog != USEC_INFINITY)
+        if (arg_system && arg_runtime_watchdog > 0 && arg_runtime_watchdog != USEC_INFINITY && !arg_disable_watchdog)
                 watchdog_set_timeout(&arg_runtime_watchdog);
 
         if (arg_timer_slack_nsec != NSEC_INFINITY)
@@ -2159,7 +2167,7 @@ finish:
 
                 assert(pos < ELEMENTSOF(command_line));
 
-                if (arm_reboot_watchdog && arg_shutdown_watchdog > 0 && arg_shutdown_watchdog != USEC_INFINITY) {
+                if (arm_reboot_watchdog && arg_shutdown_watchdog > 0 && arg_shutdown_watchdog != USEC_INFINITY && !arg_disable_watchdog ) {
                         char *e;
 
                         /* If we reboot let's set the shutdown
