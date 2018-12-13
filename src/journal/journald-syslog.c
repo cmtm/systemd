@@ -77,11 +77,10 @@ static void forward_syslog_iovec(Server *s, const struct iovec *iovec, unsigned 
         if (ucred && IN_SET(errno, ESRCH, EPERM)) {
                 struct ucred u;
 
-                /* Hmm, presumably the sender process vanished
-                 * by now, or we don't have CAP_SYS_AMDIN, so
+                /* Hmm, presumably the sender process vanished by now, or we
+                 * don't have one of [CAP_SYS_AMDIN, CAP_SETUID, CAP_SETGID], so
                  * let's fix it as good as we can, and retry */
 
-                u = *ucred;
                 u.pid = getpid_cached();
                 memcpy(CMSG_DATA(cmsg), &u, sizeof(struct ucred));
 
